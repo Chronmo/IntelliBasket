@@ -23,6 +23,7 @@
 - [项目背景与技术栈总结](docs/01_项目背景与技术栈总结.md)
 - [编码规范与接口标准](docs/02_编码规范与接口标准.md)
 - [数据接入与数仓验证记录](docs/03_数据接入与数仓验证记录.md)
+- [RFM与购物篮算法验证记录](docs/04_RFM与购物篮算法验证记录.md)
 
 ## 数据源
 
@@ -65,3 +66,14 @@ intellibasket prepare-data
 ```
 
 生成的 CSV 和剖析 JSON 默认写入已忽略的 `data/processed` 与 `outputs` 目录。原始 Excel 不进入 Git 仓库。
+
+## 分析流水线
+
+Hive分层完成后，先导出DWS分析输入，再执行算法：
+
+```powershell
+.\scripts\export_hive_analytics.ps1
+intellibasket run-analytics
+```
+
+默认生成动态RFM快照、客群汇总、客群迁移、全局与分群关联规则、年度规则漂移、月度经营指标和商品排名。

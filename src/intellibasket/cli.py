@@ -25,6 +25,21 @@ def buildParser() -> argparse.ArgumentParser:
     prepareParser.add_argument("--output", type=Path)
     prepareParser.add_argument("--profile", type=Path)
     prepareParser.add_argument("--batch-id")
+
+    analyticsParser = subparsers.add_parser(
+        "run-analytics", help="Run dynamic RFM and segmented basket analytics"
+    )
+    analyticsParser.add_argument(
+        "--input",
+        type=Path,
+        default=Path("data/processed/hive/basket_items.tsv"),
+    )
+    analyticsParser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("outputs/analytics"),
+    )
+    analyticsParser.add_argument("--config", type=Path)
     return argumentParser
 
 
@@ -50,6 +65,19 @@ def main(rawArguments: Sequence[str] | None = None) -> int:
     arguments = argumentParser.parse_args(rawArguments)
     if arguments.command == "prepare-data":
         return runPrepareData(arguments)
+    if arguments.command == "run-analytics":
+        from intellibasket.analytics.models import AnalyticsConfig
+        from intellibasket.analytics.pipeline import AnalyticsPipeline
+
+        analyticsConfig = AnalyticsConfig.fromToml(arguments.config)
+        manifest = AnalyticsPipeline(analyticsConfig).run(
+            inputPath=arguments.input.resolve(),
+            outputDirectory=arguments.output.resolve(),
+        )
+        import json
+
+        print(json.dumps(manifest, ensure_ascii=False, indent=2))
+        return 0
     argumentParser.error(f"Unsupported command: {arguments.command}")
     return 2
 

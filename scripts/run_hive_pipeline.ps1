@@ -1,7 +1,9 @@
 param(
     [string]$ProjectRoot = (Split-Path -Parent $PSScriptRoot),
     [string]$ClientScript = "E:\bigdata\tier4_stu\client.bat",
-    [string]$ClientContainer = "tier4_stu_client"
+    [string]$ClientContainer = "tier4_stu_client",
+    [ValidateRange(0, 6)]
+    [int]$StartAt = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,6 +16,10 @@ $sqlFiles = @(
     "sql\hive\05_ads.sql",
     "sql\hive\06_quality_checks.sql"
 )
+
+if ($StartAt -gt 0) {
+    $sqlFiles = $sqlFiles[$StartAt..($sqlFiles.Count - 1)]
+}
 
 foreach ($relativeSqlFile in $sqlFiles) {
     $sqlFile = (Resolve-Path (Join-Path $ProjectRoot $relativeSqlFile)).Path

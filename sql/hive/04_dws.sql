@@ -39,7 +39,7 @@ SELECT
     stock_code,
     MAX(description) AS product_name,
     SUM(quantity) AS item_quantity,
-    CAST(SUM(line_amount) AS DECIMAL(20, 2)) AS item_amount
+    CAST(SUM(line_amount) AS DECIMAL(20, 4)) AS item_amount
 FROM dwd_retail_order_item
 WHERE is_valid_analysis = 1
 GROUP BY invoice_no, customer_id, stock_code;

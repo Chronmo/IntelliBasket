@@ -1,0 +1,16 @@
+[rfm]
+scoreBins = 5
+snapshotFrequency = "ME"
+minimumHistoryDays = 30
+
+[basket]
+globalMinSupport = 0.01
+segmentMinSupport = 0.02
+minConfidence = 0.25
+minLift = 1.05
+minBasketSize = 2
+minSegmentBaskets = 200
+maxProducts = 350
+maxItemsetLength = 3
+topRulesPerScope = 100
+
