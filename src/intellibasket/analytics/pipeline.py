@@ -24,6 +24,10 @@ HIVE_BASKET_COLUMNS = [
     "productName",
     "itemQuantity",
     "itemAmount",
+    "dataOrigin",
+    "sourceSegmentCode",
+    "generationConfidence",
+    "generationBatchId",
 ]
 
 
@@ -43,6 +47,10 @@ def loadHiveBasketItems(inputPath: Path) -> pd.DataFrame:
     )
     transactions["itemQuantity"] = pd.to_numeric(transactions["itemQuantity"], errors="coerce")
     transactions["itemAmount"] = pd.to_numeric(transactions["itemAmount"], errors="coerce")
+    transactions["dataOrigin"] = transactions["dataOrigin"].fillna("REAL")
+    transactions["generationConfidence"] = pd.to_numeric(
+        transactions["generationConfidence"], errors="coerce"
+    ).fillna(1.0)
     transactions = transactions.dropna(
         subset=["invoiceNo", "customerId", "invoiceTs", "stockCode", "itemAmount"]
     )

@@ -4,13 +4,13 @@ snapshotFrequency = "ME"
 minimumHistoryDays = 30
 
 [basket]
-globalMinSupport = 0.01
-segmentMinSupport = 0.02
+globalMinSupport = 0.002
+segmentMinSupport = 0.01
 minConfidence = 0.25
 minLift = 1.05
 minBasketSize = 2
 minSegmentBaskets = 200
-maxProducts = 350
+maxProducts = 500
 maxItemsetLength = 3
-topRulesPerScope = 100
+topRulesPerScope = 500
 

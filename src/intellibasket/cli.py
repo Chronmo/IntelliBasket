@@ -41,6 +41,43 @@ def buildParser() -> argparse.ArgumentParser:
     )
     analyticsParser.add_argument("--config", type=Path)
 
+    augmentationParser = subparsers.add_parser(
+        "augment-data",
+        help="Generate traceable customer-product-amount scenario transactions",
+    )
+    augmentationParser.add_argument(
+        "--input",
+        type=Path,
+        default=Path("data/processed/hive/basket_items.tsv"),
+    )
+    augmentationParser.add_argument(
+        "--segments",
+        type=Path,
+        default=Path("outputs/analytics/rfmCustomers.csv"),
+    )
+    augmentationParser.add_argument(
+        "--output",
+        type=Path,
+        default=Path("data/processed/hive/basket_items_augmented.tsv"),
+    )
+    augmentationParser.add_argument(
+        "--synthetic-output",
+        type=Path,
+        default=Path("outputs/augmentation/syntheticTransactions.csv"),
+    )
+    augmentationParser.add_argument(
+        "--manifest",
+        type=Path,
+        default=Path("outputs/augmentation/manifest.json"),
+    )
+    augmentationParser.add_argument("--target-rows", type=int, default=60_000)
+    augmentationParser.add_argument("--synthetic-customers", type=int, default=600)
+    augmentationParser.add_argument("--seed", type=int, default=20_260_721)
+    augmentationParser.add_argument(
+        "--batch-id",
+        default="AUG-20260721-01",
+    )
+
     loadParser = subparsers.add_parser(
         "load-serving-data", help="Load analytical outputs into MySQL"
     )
@@ -90,6 +127,37 @@ def main(rawArguments: Sequence[str] | None = None) -> int:
         )
         import json
 
+        print(json.dumps(manifest, ensure_ascii=False, indent=2))
+        return 0
+    if arguments.command == "augment-data":
+        import json
+
+        import pandas as pd
+
+        from intellibasket.analytics.augmentation import (
+            AugmentationConfig,
+            runAugmentation,
+        )
+        from intellibasket.analytics.pipeline import loadHiveBasketItems
+
+        sourceTransactions = loadHiveBasketItems(arguments.input.resolve())
+        customerSegments = pd.read_csv(
+            arguments.segments.resolve(),
+            dtype={"customerId": "string"},
+        )
+        manifest = runAugmentation(
+            sourceTransactions=sourceTransactions,
+            customerSegments=customerSegments,
+            outputPath=arguments.output.resolve(),
+            syntheticOutputPath=arguments.synthetic_output.resolve(),
+            manifestPath=arguments.manifest.resolve(),
+            config=AugmentationConfig(
+                targetRowCount=arguments.target_rows,
+                syntheticCustomerCount=arguments.synthetic_customers,
+                randomSeed=arguments.seed,
+                generationBatchId=arguments.batch_id,
+            ),
+        )
         print(json.dumps(manifest, ensure_ascii=False, indent=2))
         return 0
     if arguments.command == "load-serving-data":

@@ -22,15 +22,15 @@ class RfmConfig:
 class BasketMiningConfig:
     """Configuration for global and segmented market basket mining."""
 
-    globalMinSupport: float = 0.01
-    segmentMinSupport: float = 0.02
+    globalMinSupport: float = 0.002
+    segmentMinSupport: float = 0.01
     minConfidence: float = 0.25
     minLift: float = 1.05
     minBasketSize: int = 2
     minSegmentBaskets: int = 200
-    maxProducts: int = 350
+    maxProducts: int = 500
     maxItemsetLength: int = 3
-    topRulesPerScope: int = 100
+    topRulesPerScope: int = 500
 
 
 @dataclass(frozen=True, slots=True)
