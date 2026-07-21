@@ -127,6 +127,31 @@ def buildTestClient() -> TestClient:
                 generationBatchId="TEST-BATCH",
             )
         )
+        for lineIndex, (invoiceNo, stockCode, productName) in enumerate(
+            [
+                ("SYN-TEST-2", "X", "Product X"),
+                ("SYN-TEST-2", "Y", "Product Y"),
+                ("SYN-TEST-3", "X", "Product X"),
+                ("SYN-TEST-3", "Y", "Product Y"),
+            ],
+            start=2,
+        ):
+            databaseSession.add(
+                SyntheticTransactionRecord(
+                    syntheticLineId=f"TEST-BATCH-{lineIndex:04d}",
+                    invoiceNo=invoiceNo,
+                    customerId="C001",
+                    invoiceTs=datetime(2011, 2, lineIndex, 9, 0),
+                    stockCode=stockCode,
+                    productName=productName,
+                    itemQuantity=1,
+                    itemAmount=Decimal("10.00"),
+                    sourceSegmentCode="CHAMPIONS",
+                    generationConfidence=Decimal("0.88"),
+                    generationModel="testModel",
+                    generationBatchId="TEST-BATCH",
+                )
+            )
         databaseSession.add(
             TopProductRecord(
                 stockCode="A",
@@ -187,6 +212,25 @@ def testMarketingRecommendationExplainsMatchedRule() -> None:
     assert "覆盖50张购物篮" in payload["data"][0]["reason"]
 
 
+def testMarketingRecommendationFallsBackToExplicitModelPrediction() -> None:
+    with buildTestClient() as testClient:
+        response = testClient.post(
+            "/api/v1/marketing-recommendations",
+            json={
+                "segmentCode": "CHAMPIONS",
+                "productCode": "X",
+                "minLift": 1.05,
+                "limit": 5,
+            },
+        )
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["data"][0]["consequentCodes"] == "Y"
+    assert payload["data"][0]["sourceType"] == "MODEL_PREDICTION"
+    assert payload["data"][0]["dataBasis"] == "MODEL_PREDICTION"
+
+
 def testValidationFailureUsesStandardErrorEnvelope() -> None:
     with buildTestClient() as testClient:
         response = testClient.get("/api/v1/rfm/customers", params={"pageSize": 1000})
@@ -204,5 +248,5 @@ def testAugmentationSummaryKeepsModelDataExplicit() -> None:
     payload = response.json()
     assert response.status_code == 200
     assert payload["data"]["enabled"] is True
-    assert payload["data"]["syntheticRowCount"] == 1
+    assert payload["data"]["syntheticRowCount"] == 5
     assert payload["data"]["generationBatchId"] == "TEST-BATCH"

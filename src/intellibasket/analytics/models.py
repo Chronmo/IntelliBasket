@@ -30,7 +30,7 @@ class BasketMiningConfig:
     minSegmentBaskets: int = 200
     maxProducts: int = 500
     maxItemsetLength: int = 3
-    topRulesPerScope: int = 500
+    topRulesPerScope: int = 5000
 
 
 @dataclass(frozen=True, slots=True)

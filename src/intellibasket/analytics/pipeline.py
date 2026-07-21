@@ -8,7 +8,11 @@ from pathlib import Path
 
 import pandas as pd
 
-from intellibasket.analytics.basket import calculateRuleDrift, mineAssociationRules
+from intellibasket.analytics.basket import (
+    NON_MERCHANDISE_CODES,
+    calculateRuleDrift,
+    mineAssociationRules,
+)
 from intellibasket.analytics.models import AnalyticsConfig
 from intellibasket.analytics.rfm import (
     calculateMonthlySnapshots,
@@ -42,6 +46,9 @@ def loadHiveBasketItems(inputPath: Path) -> pd.DataFrame:
             "customerId": "string",
             "stockCode": "string",
             "productName": "string",
+            "dataOrigin": "string",
+            "sourceSegmentCode": "string",
+            "generationBatchId": "string",
         },
         parse_dates=["invoiceTs"],
     )
@@ -97,14 +104,18 @@ def calculateMonthlySales(transactions: pd.DataFrame) -> pd.DataFrame:
 
 def calculateTopProducts(transactions: pd.DataFrame, limit: int = 100) -> pd.DataFrame:
     """Rank products using both sales and basket coverage."""
+    merchandiseItems = transactions.loc[
+        ~transactions["stockCode"].astype(str).str.upper().isin(NON_MERCHANDISE_CODES)
+    ]
     return (
-        transactions.groupby(["stockCode", "productName"], as_index=False)
+        merchandiseItems.groupby(["stockCode", "productName"], as_index=False)
         .agg(
             orderCount=("invoiceNo", "nunique"),
             customerCount=("customerId", "nunique"),
             itemQuantity=("itemQuantity", "sum"),
             salesAmount=("itemAmount", "sum"),
         )
+        .loc[lambda frame: frame["orderCount"].ge(20)]
         .sort_values(["salesAmount", "orderCount"], ascending=False)
         .head(limit)
         .assign(salesAmount=lambda frame: frame["salesAmount"].round(2))

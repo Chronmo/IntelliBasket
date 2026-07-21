@@ -12,5 +12,5 @@ minBasketSize = 2
 minSegmentBaskets = 200
 maxProducts = 500
 maxItemsetLength = 3
-topRulesPerScope = 500
+topRulesPerScope = 5000
 

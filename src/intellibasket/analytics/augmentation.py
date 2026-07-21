@@ -13,6 +13,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from intellibasket.analytics.basket import NON_MERCHANDISE_CODES
+
 SYNTHETIC_MODEL_NAME = "segmentAwareCooccurrenceV1"
 AUGMENTED_COLUMNS = [
     "invoiceNo",
@@ -94,8 +96,11 @@ def normalizeTransactions(transactions: pd.DataFrame) -> pd.DataFrame:
 
 def buildProductProfiles(transactions: pd.DataFrame) -> pd.DataFrame:
     """Estimate stable names, unit prices, quantities, sales, and basket coverage."""
-    pricedItems = transactions.assign(
-        unitPrice=transactions["itemAmount"] / transactions["itemQuantity"]
+    merchandiseItems = transactions.loc[
+        ~transactions["stockCode"].astype(str).str.upper().isin(NON_MERCHANDISE_CODES)
+    ]
+    pricedItems = merchandiseItems.assign(
+        unitPrice=merchandiseItems["itemAmount"] / merchandiseItems["itemQuantity"]
     )
 
     def mostFrequentName(names: pd.Series) -> str:
@@ -337,6 +342,11 @@ def generateSyntheticTransactions(
         customerBudget,
         segmentBudget,
     ) = buildSegmentContext(sourceTransactions, customerSegments)
+    validProductCodes = set(profileMap)
+    segmentProducts = {
+        segmentCode: [stockCode for stockCode in stockCodes if stockCode in validProductCodes]
+        for segmentCode, stockCodes in segmentProducts.items()
+    }
     segmentCodes = sorted(customersBySegment)
     segmentSizes = {code: len(customersBySegment[code]) for code in segmentCodes}
     syntheticCustomersBySegment = buildSyntheticCustomerPools(
@@ -346,6 +356,10 @@ def generateSyntheticTransactions(
         rng,
     )
     fallbackProducts = productProfiles.head(config.relationshipProductLimit)["stockCode"].tolist()
+    maximumAvailableBasketSize = min(config.maximumBasketSize, len(profileMap))
+    minimumValidBasketSize = 2
+    if maximumAvailableBasketSize < minimumValidBasketSize:
+        raise ValueError("Not enough merchandise products to construct a valid basket")
 
     maxInvoiceTs = sourceTransactions["invoiceTs"].max()
     forecastStart = maxInvoiceTs.normalize() + pd.Timedelta(1, unit="D")
@@ -378,12 +392,21 @@ def generateSyntheticTransactions(
             baseBudget = customerBudget.get(customerId, segmentBudget.get(segmentCode, 100.0))
 
         remainingRows = config.targetRowCount - len(generatedRows)
-        desiredBasketSize = int(
-            rng.integers(config.minimumBasketSize, config.maximumBasketSize + 1)
-        )
-        basketSize = min(desiredBasketSize, remainingRows)
-        if basketSize < 2 and generatedRows:
-            break
+        maximumBasketSize = min(maximumAvailableBasketSize, remainingRows)
+        validBasketSizes = [
+            size
+            for size in range(config.minimumBasketSize, maximumBasketSize + 1)
+            if remainingRows - size == 0 or remainingRows - size >= minimumValidBasketSize
+        ]
+        if not validBasketSizes:
+            validBasketSizes = [
+                size
+                for size in range(minimumValidBasketSize, maximumBasketSize + 1)
+                if remainingRows - size == 0 or remainingRows - size >= minimumValidBasketSize
+            ]
+        if not validBasketSizes:
+            raise RuntimeError("Unable to partition target rows into valid baskets")
+        basketSize = int(rng.choice(validBasketSizes))
         selectedCodes, relationConfidence = chooseProducts(
             anchorCode,
             segmentCode,

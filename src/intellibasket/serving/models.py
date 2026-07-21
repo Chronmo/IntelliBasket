@@ -181,6 +181,7 @@ class SyntheticTransactionRecord(Base):
         Index("ix_synthetic_batch", "generation_batch_id"),
         Index("ix_synthetic_customer", "customer_id"),
         Index("ix_synthetic_invoice", "invoice_no"),
+        Index("ix_synthetic_stock_segment", "stock_code", "source_segment_code"),
     )
 
     syntheticLineId: Mapped[str] = mapped_column("synthetic_line_id", String(64), primary_key=True)

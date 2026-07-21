@@ -106,7 +106,9 @@ onMounted(async () => {
           <article v-for="(rule, index) in recommendations" :key="rule.ruleId" class="recommendation-card">
             <span class="recommendation-card__rank">{{ String(index + 1).padStart(2, "0") }}</span>
             <div class="recommendation-card__main">
-              <span class="strategy-label">{{ rule.strategy }}</span>
+              <span class="strategy-label">
+                {{ rule.sourceType === "MODEL_PREDICTION" ? "模型预测" : rule.strategy }}
+              </span>
               <div class="product-flow">
                 <strong>{{ rule.antecedentNames }}</strong>
                 <ArrowRight :size="20" />

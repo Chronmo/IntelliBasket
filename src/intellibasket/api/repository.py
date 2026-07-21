@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import hashlib
+import math
 from datetime import date
 
 from sqlalchemy import Select, func, literal, or_, select
@@ -169,3 +171,132 @@ class AnalyticsRepository:
             "generationBatchId": summary[7],
             "generationModel": summary[8],
         }
+
+    def getSyntheticCompanionPredictions(
+        self,
+        productCode: str,
+        segmentCode: str,
+        minLift: float,
+        limit: int,
+    ) -> list[dict[str, object]]:
+        """Predict companions from the isolated model-generated transaction table."""
+        segmentConditions = []
+        if segmentCode != "ALL":
+            segmentConditions.append(SyntheticTransactionRecord.sourceSegmentCode == segmentCode)
+        anchorInvoices = (
+            select(SyntheticTransactionRecord.invoiceNo)
+            .where(
+                SyntheticTransactionRecord.stockCode == productCode,
+                *segmentConditions,
+            )
+            .distinct()
+            .subquery()
+        )
+        anchorBasketCount = int(
+            self._databaseSession.scalar(select(func.count()).select_from(anchorInvoices)) or 0
+        )
+        totalBasketCount = int(
+            self._databaseSession.scalar(
+                select(func.count(func.distinct(SyntheticTransactionRecord.invoiceNo))).where(
+                    *segmentConditions
+                )
+            )
+            or 0
+        )
+        if anchorBasketCount == 0 or totalBasketCount == 0:
+            return []
+
+        companionCoverage = (
+            select(
+                SyntheticTransactionRecord.stockCode.label("stockCode"),
+                SyntheticTransactionRecord.productName.label("productName"),
+                func.count(func.distinct(SyntheticTransactionRecord.invoiceNo)).label(
+                    "basketCount"
+                ),
+            )
+            .where(*segmentConditions)
+            .group_by(
+                SyntheticTransactionRecord.stockCode,
+                SyntheticTransactionRecord.productName,
+            )
+            .subquery()
+        )
+        pairCoverage = (
+            select(
+                SyntheticTransactionRecord.stockCode.label("stockCode"),
+                SyntheticTransactionRecord.productName.label("productName"),
+                func.count(func.distinct(SyntheticTransactionRecord.invoiceNo)).label(
+                    "pairBasketCount"
+                ),
+            )
+            .where(
+                SyntheticTransactionRecord.invoiceNo.in_(select(anchorInvoices.c.invoiceNo)),
+                SyntheticTransactionRecord.stockCode != productCode,
+                *segmentConditions,
+            )
+            .group_by(
+                SyntheticTransactionRecord.stockCode,
+                SyntheticTransactionRecord.productName,
+            )
+            .subquery()
+        )
+        rows = self._databaseSession.execute(
+            select(
+                pairCoverage.c.stockCode,
+                pairCoverage.c.productName,
+                pairCoverage.c.pairBasketCount,
+                companionCoverage.c.basketCount,
+            )
+            .join(
+                companionCoverage,
+                (pairCoverage.c.stockCode == companionCoverage.c.stockCode)
+                & (pairCoverage.c.productName == companionCoverage.c.productName),
+            )
+            .order_by(pairCoverage.c.pairBasketCount.desc())
+            .limit(max(limit * 5, 20))
+        ).all()
+        anchorName = self._databaseSession.scalar(
+            select(func.max(SyntheticTransactionRecord.productName)).where(
+                SyntheticTransactionRecord.stockCode == productCode
+            )
+        )
+        predictions: list[dict[str, object]] = []
+        minimumPredictionCoverage = max(2, math.ceil(totalBasketCount * 0.002))
+        for row in rows:
+            pairBasketCount = int(row[2])
+            confidence = pairBasketCount / anchorBasketCount
+            support = pairBasketCount / totalBasketCount
+            companionProbability = int(row[3]) / totalBasketCount
+            lift = confidence / companionProbability if companionProbability else 0
+            if lift < minLift or confidence < 0.25 or pairBasketCount < minimumPredictionCoverage:
+                continue
+            ruleId = hashlib.sha1(
+                f"MODEL:{segmentCode}:{productCode}>{row[0]}".encode()
+            ).hexdigest()[:16]
+            predictions.append(
+                {
+                    "ruleId": ruleId,
+                    "segmentCode": segmentCode,
+                    "segmentName": "模型预测场景",
+                    "antecedentCodes": productCode,
+                    "antecedentNames": anchorName or productCode,
+                    "consequentCodes": str(row[0]),
+                    "consequentNames": str(row[1]),
+                    "support": round(support, 6),
+                    "confidence": round(confidence, 6),
+                    "lift": round(lift, 6),
+                    "coverageBasketCount": pairBasketCount,
+                    "scopeBasketCount": totalBasketCount,
+                    "rankScore": round(confidence * lift * math.log1p(pairBasketCount), 6),
+                    "strategy": "预测组合",
+                    "reason": (
+                        f"模型增强场景置信度{confidence:.1%}，提升度{lift:.2f}，"
+                        f"覆盖{pairBasketCount}张预测购物篮"
+                    ),
+                    "dataBasis": "MODEL_PREDICTION",
+                    "sourceType": "MODEL_PREDICTION",
+                }
+            )
+            if len(predictions) >= limit:
+                break
+        return predictions

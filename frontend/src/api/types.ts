@@ -79,7 +79,8 @@ export interface AssociationRule {
   rankScore: number;
   strategy?: string;
   reason?: string;
-  dataBasis?: "REAL_AND_MODEL_AUGMENTED";
+  dataBasis?: "REAL_AND_MODEL_AUGMENTED" | "MODEL_PREDICTION";
+  sourceType?: "SEGMENT_RULE" | "GLOBAL_RULE_FALLBACK" | "MODEL_PREDICTION";
 }
 
 export interface AugmentationSummary {

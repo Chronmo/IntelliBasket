@@ -339,18 +339,27 @@ def createApp(
         recommendationRequest: MarketingRecommendationRequest,
         databaseSession: DatabaseSession,
     ) -> Any:
-        candidateRules = AnalyticsRepository(databaseSession).getRules(
-            recommendationRequest.segmentCode,
-            recommendationRequest.minLift,
-            0,
-            recommendationRequest.productCode,
-            200,
-        )
-        matchedRules = [
-            rule
-            for rule in candidateRules
-            if recommendationRequest.productCode in rule.antecedentCodes.split("|")
-        ][: recommendationRequest.limit]
+        repository = AnalyticsRepository(databaseSession)
+
+        def findMatchedRules(segmentCode: str) -> list[Any]:
+            candidateRules = repository.getRules(
+                segmentCode,
+                recommendationRequest.minLift,
+                0,
+                recommendationRequest.productCode,
+                500,
+            )
+            return [
+                rule
+                for rule in candidateRules
+                if recommendationRequest.productCode in rule.antecedentCodes.split("|")
+            ][: recommendationRequest.limit]
+
+        matchedRules = findMatchedRules(recommendationRequest.segmentCode)
+        sourceType = "SEGMENT_RULE"
+        if not matchedRules and recommendationRequest.segmentCode != "ALL":
+            matchedRules = findMatchedRules("ALL")
+            sourceType = "GLOBAL_RULE_FALLBACK"
         recommendations = [
             {
                 **serializeRecord(rule, RULE_FIELDS),
@@ -360,9 +369,25 @@ def createApp(
                     f"提升度{float(rule.lift):.2f}，覆盖{rule.coverageBasketCount}张购物篮"
                 ),
                 "dataBasis": "REAL_AND_MODEL_AUGMENTED",
+                "sourceType": sourceType,
             }
             for rule in matchedRules
         ]
+        if not recommendations:
+            predictions = repository.getSyntheticCompanionPredictions(
+                recommendationRequest.productCode,
+                recommendationRequest.segmentCode,
+                recommendationRequest.minLift,
+                recommendationRequest.limit,
+            )
+            if not predictions and recommendationRequest.segmentCode != "ALL":
+                predictions = repository.getSyntheticCompanionPredictions(
+                    recommendationRequest.productCode,
+                    "ALL",
+                    recommendationRequest.minLift,
+                    recommendationRequest.limit,
+                )
+            recommendations = predictions
         return buildSuccessResponse(request, recommendations)
 
     return application
