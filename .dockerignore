@@ -1,0 +1,11 @@
+.git
+.venv
+data
+outputs
+runtime
+frontend/node_modules
+frontend/dist
+__pycache__
+*.pyc
+*.xlsx
+*.csv

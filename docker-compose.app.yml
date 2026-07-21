@@ -36,6 +36,17 @@ services:
       mysql:
         condition: service_healthy
 
+  web:
+    build:
+      context: .
+      dockerfile: docker/frontend.Dockerfile
+    container_name: intellibasket_web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      api:
+        condition: service_started
+
 volumes:
   intellibasket_mysql_data:
-

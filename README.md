@@ -25,6 +25,7 @@
 - [数据接入与数仓验证记录](docs/03_数据接入与数仓验证记录.md)
 - [RFM与购物篮算法验证记录](docs/04_RFM与购物篮算法验证记录.md)
 - [API与服务层验证记录](docs/05_API与服务层验证记录.md)
+- [Web驾驶舱与联调验证记录](docs/06_Web驾驶舱与联调验证记录.md)
 
 ## 数据源
 
@@ -90,3 +91,15 @@ intellibasket serve
 - API文档：http://localhost:8000/docs
 - 存活检查：http://localhost:8000/api/v1/health/live
 - 依赖检查：http://localhost:8000/api/v1/health/ready
+
+## Web 驾驶舱
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+- 开发地址：http://localhost:5173
+- 容器地址：http://localhost:8080
+- 页面：经营总览、动态 RFM、分群购物篮、营销策略中心
