@@ -9,12 +9,7 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
-
-SOURCE_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "online+retail+ii"
-    / "online_retail_II.xlsx"
-)
+SOURCE_PATH = Path(__file__).resolve().parents[2] / "online+retail+ii" / "online_retail_II.xlsx"
 
 
 def main() -> None:
@@ -127,9 +122,7 @@ def main() -> None:
         "validCustomers": len(validCustomers),
         "validProducts": len(validProducts),
         "validSalesAmountGbp": round(validSalesAmount, 2),
-        "averageValidBasketAmountGbp": round(
-            validSalesAmount / len(validInvoices), 2
-        )
+        "averageValidBasketAmountGbp": round(validSalesAmount / len(validInvoices), 2)
         if validInvoices
         else 0.0,
     }

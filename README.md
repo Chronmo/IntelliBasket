@@ -22,6 +22,7 @@
 
 - [项目背景与技术栈总结](docs/01_项目背景与技术栈总结.md)
 - [编码规范与接口标准](docs/02_编码规范与接口标准.md)
+- [数据接入与数仓验证记录](docs/03_数据接入与数仓验证记录.md)
 
 ## 数据源
 
@@ -55,3 +56,12 @@ retail_customer_basket_intelligence/
 ```
 
 第二阶段将继续补充 `data`、`sql`、`backend`、`frontend`、`tests` 与 `outputs` 等目录。
+
+## 本地数据准备
+
+```powershell
+python -m pip install -e ".[dev]"
+intellibasket prepare-data
+```
+
+生成的 CSV 和剖析 JSON 默认写入已忽略的 `data/processed` 与 `outputs` 目录。原始 Excel 不进入 Git 仓库。
