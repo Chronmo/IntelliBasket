@@ -79,6 +79,20 @@ export interface AssociationRule {
   rankScore: number;
   strategy?: string;
   reason?: string;
+  dataBasis?: "REAL_AND_MODEL_AUGMENTED";
+}
+
+export interface AugmentationSummary {
+  enabled: boolean;
+  syntheticRowCount: number;
+  syntheticOrderCount: number;
+  syntheticCustomerCount: number;
+  predictedSalesAmount: number;
+  averageConfidence: number;
+  forecastStart: string | null;
+  forecastEnd: string | null;
+  generationBatchId: string | null;
+  generationModel: string | null;
 }
 
 export interface RuleDrift {

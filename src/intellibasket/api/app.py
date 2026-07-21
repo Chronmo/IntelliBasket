@@ -325,6 +325,14 @@ def createApp(
             request, [serializeRecord(record, fields) for record in records]
         )
 
+    @application.get("/api/v1/data-augmentation/summary")
+    def getAugmentationSummary(
+        request: Request,
+        databaseSession: DatabaseSession,
+    ) -> Any:
+        summary = AnalyticsRepository(databaseSession).getAugmentationSummary()
+        return buildSuccessResponse(request, summary)
+
     @application.post("/api/v1/marketing-recommendations")
     def getMarketingRecommendations(
         request: Request,
@@ -351,6 +359,7 @@ def createApp(
                     f"历史置信度{float(rule.confidence):.1%}，"
                     f"提升度{float(rule.lift):.2f}，覆盖{rule.coverageBasketCount}张购物篮"
                 ),
+                "dataBasis": "REAL_AND_MODEL_AUGMENTED",
             }
             for rule in matchedRules
         ]

@@ -16,6 +16,7 @@ from intellibasket.serving.models import (
     MonthlySaleRecord,
     RfmCustomerSnapshotRecord,
     RfmSegmentSummaryRecord,
+    SyntheticTransactionRecord,
     TopProductRecord,
 )
 
@@ -111,6 +112,22 @@ def buildTestClient() -> TestClient:
             )
         )
         databaseSession.add(
+            SyntheticTransactionRecord(
+                syntheticLineId="TEST-BATCH-0001",
+                invoiceNo="SYN-TEST-1",
+                customerId="C001",
+                invoiceTs=datetime(2011, 2, 1, 9, 0),
+                stockCode="A",
+                productName="Product A",
+                itemQuantity=2,
+                itemAmount=Decimal("20.00"),
+                sourceSegmentCode="CHAMPIONS",
+                generationConfidence=Decimal("0.91"),
+                generationModel="testModel",
+                generationBatchId="TEST-BATCH",
+            )
+        )
+        databaseSession.add(
             TopProductRecord(
                 stockCode="A",
                 productName="Product A (renamed)",
@@ -178,3 +195,14 @@ def testValidationFailureUsesStandardErrorEnvelope() -> None:
     assert response.status_code == 422
     assert payload["success"] is False
     assert payload["error"]["code"] == "REQUEST_VALIDATION_FAILED"
+
+
+def testAugmentationSummaryKeepsModelDataExplicit() -> None:
+    with buildTestClient() as testClient:
+        response = testClient.get("/api/v1/data-augmentation/summary")
+
+    payload = response.json()
+    assert response.status_code == 200
+    assert payload["data"]["enabled"] is True
+    assert payload["data"]["syntheticRowCount"] == 1
+    assert payload["data"]["generationBatchId"] == "TEST-BATCH"

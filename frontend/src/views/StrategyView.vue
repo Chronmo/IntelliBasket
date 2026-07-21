@@ -99,7 +99,7 @@ onMounted(async () => {
       <template v-else>
         <header class="result-heading">
           <div><span class="eyebrow">RECOMMENDATION RESULT</span><h2>共找到 {{ recommendations.length }} 个可信组合</h2></div>
-          <span class="result-status"><BadgeCheck :size="17" />真实订单验证</span>
+          <span class="result-status"><BadgeCheck :size="17" />真实订单 + 模型增强</span>
         </header>
 
         <div v-if="recommendations.length" class="recommendation-list">
@@ -113,6 +113,9 @@ onMounted(async () => {
                 <strong>{{ rule.consequentNames }}</strong>
               </div>
               <p>{{ rule.reason }}</p>
+              <small v-if="rule.dataBasis" class="data-basis">
+                分析依据：真实交易与可追溯模型增强场景
+              </small>
             </div>
             <div class="rule-evidence">
               <div><span>置信度</span><strong>{{ (rule.confidence * 100).toFixed(1) }}%</strong></div>

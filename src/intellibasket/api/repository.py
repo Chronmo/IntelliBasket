@@ -15,6 +15,7 @@ from intellibasket.serving.models import (
     RfmSegmentSummaryRecord,
     RuleDriftRecord,
     SegmentMigrationRecord,
+    SyntheticTransactionRecord,
     TopProductRecord,
 )
 
@@ -139,3 +140,32 @@ class AnalyticsRepository:
                 select(TopProductRecord).order_by(TopProductRecord.salesAmount.desc()).limit(limit)
             )
         )
+
+    def getAugmentationSummary(self) -> dict[str, object]:
+        """Summarize model-generated rows without mixing them into source provenance."""
+        summary = self._databaseSession.execute(
+            select(
+                func.count(SyntheticTransactionRecord.syntheticLineId),
+                func.count(func.distinct(SyntheticTransactionRecord.invoiceNo)),
+                func.count(func.distinct(SyntheticTransactionRecord.customerId)),
+                func.sum(SyntheticTransactionRecord.itemAmount),
+                func.avg(SyntheticTransactionRecord.generationConfidence),
+                func.min(SyntheticTransactionRecord.invoiceTs),
+                func.max(SyntheticTransactionRecord.invoiceTs),
+                func.max(SyntheticTransactionRecord.generationBatchId),
+                func.max(SyntheticTransactionRecord.generationModel),
+            )
+        ).one()
+        syntheticRowCount = int(summary[0] or 0)
+        return {
+            "enabled": syntheticRowCount > 0,
+            "syntheticRowCount": syntheticRowCount,
+            "syntheticOrderCount": int(summary[1] or 0),
+            "syntheticCustomerCount": int(summary[2] or 0),
+            "predictedSalesAmount": round(float(summary[3] or 0), 2),
+            "averageConfidence": round(float(summary[4] or 0), 6),
+            "forecastStart": summary[5].isoformat() if summary[5] else None,
+            "forecastEnd": summary[6].isoformat() if summary[6] else None,
+            "generationBatchId": summary[7],
+            "generationModel": summary[8],
+        }

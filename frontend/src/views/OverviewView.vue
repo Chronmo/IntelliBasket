@@ -4,7 +4,12 @@ import { CircleDollarSign, PackageOpen, ReceiptText, UsersRound } from "@lucide/
 import { computed, onMounted, ref } from "vue";
 
 import { analyticsApi } from "@/api/client";
-import type { BusinessOverview, MonthlySale, TopProduct } from "@/api/types";
+import type {
+  AugmentationSummary,
+  BusinessOverview,
+  MonthlySale,
+  TopProduct,
+} from "@/api/types";
 import EChart from "@/components/EChart.vue";
 import LoadingState from "@/components/LoadingState.vue";
 import MetricCard from "@/components/MetricCard.vue";
@@ -13,6 +18,7 @@ import PanelHeader from "@/components/PanelHeader.vue";
 const overview = ref<BusinessOverview>();
 const monthlySales = ref<MonthlySale[]>([]);
 const topProducts = ref<TopProduct[]>([]);
+const augmentationSummary = ref<AugmentationSummary>();
 const isLoading = ref(true);
 const errorMessage = ref("");
 
@@ -101,14 +107,17 @@ const productOption = computed<EChartsOption>(() => {
 
 onMounted(async () => {
   try {
-    const [overviewResponse, monthlyResponse, productsResponse] = await Promise.all([
-      analyticsApi.getOverview(),
-      analyticsApi.getMonthlySales(),
-      analyticsApi.getTopProducts(10),
-    ]);
+    const [overviewResponse, monthlyResponse, productsResponse, augmentationResponse] =
+      await Promise.all([
+        analyticsApi.getOverview(),
+        analyticsApi.getMonthlySales(),
+        analyticsApi.getTopProducts(10),
+        analyticsApi.getAugmentationSummary(),
+      ]);
     overview.value = overviewResponse.data;
     monthlySales.value = monthlyResponse.data;
     topProducts.value = productsResponse.data;
+    augmentationSummary.value = augmentationResponse.data;
   } catch {
     errorMessage.value = "暂时无法连接分析服务，请确认 FastAPI 与 MySQL 已启动。";
   } finally {
@@ -150,6 +159,22 @@ onMounted(async () => {
         :icon="PackageOpen"
         tone="violet"
       />
+    </section>
+
+    <section v-if="augmentationSummary?.enabled" class="augmentation-banner">
+      <div>
+        <span>MODEL-AUGMENTED SCENARIO</span>
+        <strong>{{ augmentationSummary.syntheticRowCount.toLocaleString() }} 条模型生成交易已参与本轮分析</strong>
+        <p>
+          独立存储并可追溯，不替代 UCI 原始事实；平均生成置信度
+          {{ (augmentationSummary.averageConfidence * 100).toFixed(1) }}%。
+        </p>
+      </div>
+      <dl>
+        <div><dt>预测购物篮</dt><dd>{{ augmentationSummary.syntheticOrderCount.toLocaleString() }}</dd></div>
+        <div><dt>涉及客户</dt><dd>{{ augmentationSummary.syntheticCustomerCount.toLocaleString() }}</dd></div>
+        <div><dt>预测金额</dt><dd>{{ currencyFormatter.format(augmentationSummary.predictedSalesAmount) }}</dd></div>
+      </dl>
     </section>
 
     <section class="dashboard-grid dashboard-grid--wide">

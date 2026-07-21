@@ -87,6 +87,11 @@ def buildParser() -> argparse.ArgumentParser:
         default=Path("outputs/analytics"),
     )
     loadParser.add_argument("--database-url")
+    loadParser.add_argument(
+        "--augmentation-input",
+        type=Path,
+        default=Path("outputs/augmentation"),
+    )
 
     serveParser = subparsers.add_parser("serve", help="Run the IntelliBasket API")
     serveParser.add_argument("--host")
@@ -175,7 +180,8 @@ def main(rawArguments: Sequence[str] | None = None) -> int:
         databaseEngine = buildEngine(databaseUrl)
         initializeDatabase(databaseEngine)
         importedCounts = ServingDataImporter(buildSessionFactory(databaseEngine)).importDirectory(
-            arguments.input.resolve()
+            arguments.input.resolve(),
+            arguments.augmentation_input.resolve(),
         )
         print(json.dumps(importedCounts, ensure_ascii=False, indent=2))
         return 0

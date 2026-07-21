@@ -3,6 +3,7 @@ import axios from "axios";
 import type {
   ApiResponse,
   AssociationRule,
+  AugmentationSummary,
   BusinessOverview,
   MonthlySale,
   RfmCustomer,
@@ -24,6 +25,8 @@ async function getData<T>(path: string, params?: object): Promise<ApiResponse<T>
 
 export const analyticsApi = {
   getReadiness: () => getData<{ status: string }>("/health/ready"),
+  getAugmentationSummary: () =>
+    getData<AugmentationSummary>("/data-augmentation/summary"),
   getOverview: () => getData<BusinessOverview>("/overview"),
   getMonthlySales: () => getData<MonthlySale[]>("/sales/monthly"),
   getSegments: (snapshotDate?: string) =>

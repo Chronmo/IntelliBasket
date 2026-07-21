@@ -171,3 +171,27 @@ class TopProductRecord(Base):
     customerCount: Mapped[int] = mapped_column("customer_count", Integer)
     itemQuantity: Mapped[int] = mapped_column("item_quantity", Integer)
     salesAmount: Mapped[Decimal] = mapped_column("sales_amount", Numeric(20, 2))
+
+
+class SyntheticTransactionRecord(Base):
+    """Traceable model-generated transaction line kept separate from source facts."""
+
+    __tablename__ = "synthetic_transaction"
+    __table_args__ = (
+        Index("ix_synthetic_batch", "generation_batch_id"),
+        Index("ix_synthetic_customer", "customer_id"),
+        Index("ix_synthetic_invoice", "invoice_no"),
+    )
+
+    syntheticLineId: Mapped[str] = mapped_column("synthetic_line_id", String(64), primary_key=True)
+    invoiceNo: Mapped[str] = mapped_column("invoice_no", String(128))
+    customerId: Mapped[str] = mapped_column("customer_id", String(32))
+    invoiceTs: Mapped[datetime] = mapped_column("invoice_ts", DateTime)
+    stockCode: Mapped[str] = mapped_column("stock_code", String(64))
+    productName: Mapped[str] = mapped_column("product_name", String(512))
+    itemQuantity: Mapped[int] = mapped_column("item_quantity", Integer)
+    itemAmount: Mapped[Decimal] = mapped_column("item_amount", Numeric(20, 4))
+    sourceSegmentCode: Mapped[str] = mapped_column("source_segment_code", String(32))
+    generationConfidence: Mapped[Decimal] = mapped_column("generation_confidence", Numeric(10, 6))
+    generationModel: Mapped[str] = mapped_column("generation_model", String(64))
+    generationBatchId: Mapped[str] = mapped_column("generation_batch_id", String(64))

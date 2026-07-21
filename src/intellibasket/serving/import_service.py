@@ -21,6 +21,7 @@ from intellibasket.serving.models import (
     RfmSegmentSummaryRecord,
     RuleDriftRecord,
     SegmentMigrationRecord,
+    SyntheticTransactionRecord,
     TopProductRecord,
 )
 
@@ -68,7 +69,11 @@ class ServingDataImporter:
     def __init__(self, sessionFactory: sessionmaker[Session]) -> None:
         self._sessionFactory = sessionFactory
 
-    def importDirectory(self, outputDirectory: Path) -> dict[str, int]:
+    def importDirectory(
+        self,
+        outputDirectory: Path,
+        augmentationDirectory: Path | None = None,
+    ) -> dict[str, int]:
         """Import a complete analytics output directory idempotently."""
         overview = json.loads(
             (outputDirectory / "businessOverview.json").read_text(encoding="utf-8")
@@ -77,6 +82,25 @@ class ServingDataImporter:
         overview["averageBasketAmount"] = Decimal(str(overview["averageBasketAmount"]))
         overview["minInvoiceTs"] = parseDatetime(overview["minInvoiceTs"])
         overview["maxInvoiceTs"] = parseDatetime(overview["maxInvoiceTs"])
+
+        syntheticPath = (
+            augmentationDirectory / "syntheticTransactions.csv"
+            if augmentationDirectory is not None
+            else None
+        )
+        syntheticRecords = (
+            readCsvRecords(
+                syntheticPath,
+                {
+                    "invoiceTs": parseDatetime,
+                    "itemQuantity": parseInteger,
+                    "itemAmount": parseDecimal,
+                    "generationConfidence": parseDecimal,
+                },
+            )
+            if syntheticPath is not None and syntheticPath.exists()
+            else []
+        )
 
         importDefinitions: list[tuple[type[Any], list[dict[str, Any]]]] = [
             (BusinessOverviewRecord, [overview]),
@@ -183,6 +207,7 @@ class ServingDataImporter:
                     },
                 ),
             ),
+            (SyntheticTransactionRecord, syntheticRecords),
         ]
 
         importedCounts: dict[str, int] = {}
