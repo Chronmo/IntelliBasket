@@ -24,6 +24,7 @@
 - [编码规范与接口标准](docs/02_编码规范与接口标准.md)
 - [数据接入与数仓验证记录](docs/03_数据接入与数仓验证记录.md)
 - [RFM与购物篮算法验证记录](docs/04_RFM与购物篮算法验证记录.md)
+- [API与服务层验证记录](docs/05_API与服务层验证记录.md)
 
 ## 数据源
 
@@ -77,3 +78,15 @@ intellibasket run-analytics
 ```
 
 默认生成动态RFM快照、客群汇总、客群迁移、全局与分群关联规则、年度规则漂移、月度经营指标和商品排名。
+
+## 分析服务
+
+```powershell
+docker compose -f docker-compose.app.yml up -d mysql
+intellibasket load-serving-data
+intellibasket serve
+```
+
+- API文档：http://localhost:8000/docs
+- 存活检查：http://localhost:8000/api/v1/health/live
+- 依赖检查：http://localhost:8000/api/v1/health/ready

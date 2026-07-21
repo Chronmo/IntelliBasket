@@ -40,6 +40,20 @@ def buildParser() -> argparse.ArgumentParser:
         default=Path("outputs/analytics"),
     )
     analyticsParser.add_argument("--config", type=Path)
+
+    loadParser = subparsers.add_parser(
+        "load-serving-data", help="Load analytical outputs into MySQL"
+    )
+    loadParser.add_argument(
+        "--input",
+        type=Path,
+        default=Path("outputs/analytics"),
+    )
+    loadParser.add_argument("--database-url")
+
+    serveParser = subparsers.add_parser("serve", help="Run the IntelliBasket API")
+    serveParser.add_argument("--host")
+    serveParser.add_argument("--port", type=int)
     return argumentParser
 
 
@@ -77,6 +91,36 @@ def main(rawArguments: Sequence[str] | None = None) -> int:
         import json
 
         print(json.dumps(manifest, ensure_ascii=False, indent=2))
+        return 0
+    if arguments.command == "load-serving-data":
+        import json
+
+        from intellibasket.serving.database import (
+            buildEngine,
+            buildSessionFactory,
+            initializeDatabase,
+        )
+        from intellibasket.serving.import_service import ServingDataImporter
+
+        projectSettings = ProjectSettings.fromEnvironment()
+        databaseUrl = arguments.database_url or projectSettings.mysqlUrl
+        databaseEngine = buildEngine(databaseUrl)
+        initializeDatabase(databaseEngine)
+        importedCounts = ServingDataImporter(buildSessionFactory(databaseEngine)).importDirectory(
+            arguments.input.resolve()
+        )
+        print(json.dumps(importedCounts, ensure_ascii=False, indent=2))
+        return 0
+    if arguments.command == "serve":
+        import uvicorn
+
+        projectSettings = ProjectSettings.fromEnvironment()
+        uvicorn.run(
+            "intellibasket.api.app:app",
+            host=arguments.host or projectSettings.apiHost,
+            port=arguments.port or projectSettings.apiPort,
+            reload=False,
+        )
         return 0
     argumentParser.error(f"Unsupported command: {arguments.command}")
     return 2

@@ -1,0 +1,41 @@
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: intellibasket_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: intellibasket
+      MYSQL_USER: intellibasket
+      MYSQL_PASSWORD: intellibasket
+      TZ: Asia/Shanghai
+    ports:
+      - "3307:3306"
+    volumes:
+      - intellibasket_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/backend.Dockerfile
+    container_name: intellibasket_api
+    restart: unless-stopped
+    environment:
+      INTELLIBASKET_MYSQL_URL: mysql+pymysql://intellibasket:intellibasket@mysql:3306/intellibasket
+      INTELLIBASKET_API_HOST: 0.0.0.0
+      INTELLIBASKET_API_PORT: 8000
+      INTELLIBASKET_ALLOWED_ORIGINS: http://localhost:5173
+    ports:
+      - "8000:8000"
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+volumes:
+  intellibasket_mysql_data:
+
