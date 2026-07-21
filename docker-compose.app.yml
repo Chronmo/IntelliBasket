@@ -4,17 +4,17 @@ services:
     container_name: intellibasket_mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: root
-      MYSQL_DATABASE: intellibasket
-      MYSQL_USER: intellibasket
-      MYSQL_PASSWORD: intellibasket
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-intellibasket}
+      MYSQL_USER: ${MYSQL_USER:-intellibasket}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-intellibasket}
       TZ: Asia/Shanghai
     ports:
-      - "3307:3306"
+      - "${MYSQL_PORT:-3307}:3306"
     volumes:
       - intellibasket_mysql_data:/var/lib/mysql
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      test: ["CMD-SHELL", "mysqladmin ping -h localhost -u$$MYSQL_USER -p$$MYSQL_PASSWORD"]
       interval: 5s
       timeout: 5s
       retries: 30
@@ -26,15 +26,24 @@ services:
     container_name: intellibasket_api
     restart: unless-stopped
     environment:
-      INTELLIBASKET_MYSQL_URL: mysql+pymysql://intellibasket:intellibasket@mysql:3306/intellibasket
+      INTELLIBASKET_MYSQL_URL: mysql+pymysql://${MYSQL_USER:-intellibasket}:${MYSQL_PASSWORD:-intellibasket}@mysql:3306/${MYSQL_DATABASE:-intellibasket}
       INTELLIBASKET_API_HOST: 0.0.0.0
       INTELLIBASKET_API_PORT: 8000
-      INTELLIBASKET_ALLOWED_ORIGINS: http://localhost:5173
+      INTELLIBASKET_ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:8080}
     ports:
-      - "8000:8000"
+      - "${API_PORT:-8000}:8000"
     depends_on:
       mysql:
         condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/ready')"
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
   web:
     build:
@@ -43,10 +52,15 @@ services:
     container_name: intellibasket_web
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "${WEB_PORT:-8080}:80"
     depends_on:
       api:
-        condition: service_started
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1/"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
 
 volumes:
   intellibasket_mysql_data:

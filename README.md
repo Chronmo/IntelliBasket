@@ -15,7 +15,7 @@
 ## 当前阶段
 
 - [x] 第一阶段：项目背景、数据可行性、功能边界与技术栈总结
-- [ ] 第二阶段：数据仓库、算法、后端与前端编码
+- [x] 第二阶段：数据仓库、算法、后端与前端编码
 - [ ] 第三阶段：测试总结、项目文档、答辩 PPT 与演示材料
 
 第一阶段正式文档：
@@ -26,6 +26,7 @@
 - [RFM与购物篮算法验证记录](docs/04_RFM与购物篮算法验证记录.md)
 - [API与服务层验证记录](docs/05_API与服务层验证记录.md)
 - [Web驾驶舱与联调验证记录](docs/06_Web驾驶舱与联调验证记录.md)
+- [第二阶段编码验收记录](docs/07_第二阶段编码验收记录.md)
 
 ## 数据源
 
@@ -103,3 +104,13 @@ npm run dev
 - 开发地址：http://localhost:5173
 - 容器地址：http://localhost:8080
 - 页面：经营总览、动态 RFM、分群购物篮、营销策略中心
+
+## 一键验收与演示
+
+```powershell
+.\scripts\setup_environment.ps1
+.\scripts\test_all.ps1
+.\scripts\start_demo.ps1
+```
+
+启动后访问 http://localhost:8080；演示结束执行 `.\scripts\stop_demo.ps1`，MySQL 数据卷会被保留。
